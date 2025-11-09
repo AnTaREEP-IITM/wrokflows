@@ -1,0 +1,87 @@
+name: Matrix Build with Artifacts
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: [16, 18, 20]
+        include:
+          - os: ubuntu-latest
+            suffix: linux
+          - os: macos-latest
+            suffix: macos
+          - os: windows-latest
+            suffix: windows
+    
+    name: Build on ${{ matrix.os }} (Node ${{ matrix.node-version }})
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    
+    - name: matrix-a20bf30 Build Step
+      run: |
+        echo "Building for ${{ matrix.os }} with Node.js ${{ matrix.node-version }}"
+        echo "Build identifier: matrix-a20bf30"
+        echo "Platform: ${{ matrix.suffix }}"
+    
+    - name: Generate build artifact
+      run: |
+        # Create a unique build artifact for each matrix combination
+        echo "Build output for ${{ matrix.os }} with Node.js ${{ matrix.node-version }}" > output.txt
+        echo "Build timestamp: $(date)" >> output.txt
+        echo "Platform: ${{ matrix.suffix }}" >> output.txt
+        echo "Node version: ${{ matrix.node-version }}" >> output.txt
+        echo "Build ID: ${{ github.run_id }}" >> output.txt
+        
+        # Create additional artifact content based on platform
+        if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+          echo "Platform Type: Linux Ubuntu" >> output.txt
+          echo "Architecture: x64" >> output.txt
+        elif [ "${{ matrix.os }}" == "macos-latest" ]; then
+          echo "Platform Type: macOS" >> output.txt
+          echo "Architecture: Apple Silicon/Intel" >> output.txt
+        else
+          echo "Platform Type: Windows" >> output.txt
+          echo "Architecture: x64" >> output.txt
+        fi
+        
+        # Verify the file has content
+        echo "Artifact content verification:" >> output.txt
+        wc -l output.txt || echo "File created successfully" >> output.txt
+    
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-a20bf30-${{ matrix.suffix }}-node${{ matrix.node-version }}
+        path: output.txt
+        retention-days: 7
+    
+    - name: Verify artifact content
+      run: |
+        # Verify the artifact file exists and has content
+        if [ -f output.txt ] && [ -s output.txt ]; then
+          echo "✅ Artifact file exists and is non-empty"
+          echo "File contents:"
+          cat output.txt
+          echo "Line count:"
+          wc -l output.txt
+        else
+          echo "❌ Artifact file is missing or empty"
+          exit 1
+        fi
